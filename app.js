@@ -1,5 +1,6 @@
 (function(){
 "use strict";
+var CAM={run:false};function camStop(){}
 function pad(n){return String(n).padStart(2,"0")}
 function key(d){d=d||new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
 function parse(k){var p=k.split("-");return new Date(+p[0],p[1]-1,+p[2],12)}
@@ -83,6 +84,7 @@ function merge(a,b){
  ["gates","pen","paid","ratings","custom","mealDel","gHide","recHide"].forEach(function(f){r[f]=Object.assign({},b[f]||{},r[f]||{})});
  r.books=r.books||{};Object.keys(b.books||{}).forEach(function(i){if(!r.books[i]||(b.books[i].u||0)>(r.books[i].u||0))r.books[i]=b.books[i]});
  Object.keys(b.custom||{}).forEach(function(i){if(b.custom[i].del&&r.custom[i])r.custom[i].del=true});
+ r.body=Object.assign({},b.body||{},r.body||{});Object.keys(b.body||{}).forEach(function(i){if((b.body[i].u||0)>((r.body[i]||{}).u||0))r.body[i]=b.body[i]});
  r.fin=r.fin||{e:{},m:{}};var bf=b.fin||{e:{},m:{}};["e","m"].forEach(function(f){r.fin[f]=r.fin[f]||{};Object.keys(bf[f]||{}).forEach(function(i){var x=r.fin[f][i],y=bf[f][i];if(!x||(y.u||0)>(x.u||0))r.fin[f][i]=y})});
  Object.keys(b.dec||{}).forEach(function(k){if((b.dec[k]||0)>(r.dec[k]||0)){r.dec[k]=b.dec[k];r.decAt[k]=(b.decAt||{})[k]}});
  r.start=a.start<b.start?a.start:b.start;r.lastRoll=a.lastRoll>b.lastRoll?a.lastRoll:b.lastRoll;
@@ -136,6 +138,7 @@ function directive(){
  function open(id){return qs.some(function(q){return q.id===id&&!isDone(k,q)})}
  if(D(k).shield)return"Форс-мажор принят. Сегодня штрафа нет. Береги себя.";
  if(pending())return"Сначала штрафная зона. Потом всё остальное.";
+ if(S.body){var bd=bodyDates();if(bd.length&&k>=next(bd[bd.length-1],30))return"Прошло 30 дней: пора сделать замер тела.";}
  var fo=finOverdue();if(fo.length)return"Финансы: подтверди «"+fo[0].name+"» за этот месяц.";
  if(!hard.length)return"Все обязательные квесты закрыты. Вечер свободен.";
  if(w===6)return"Суббота для семьи. Вода и время с родителями, остальное подождёт.";
@@ -152,7 +155,7 @@ function renderHead(){
  var p=$("penalty"),pk=pending();
  if(pk){p.innerHTML='<section class="win penalty"><h2>Штрафная зона</h2><p>Квесты не закрыты: '+S.pen[pk].n+'. Задание: 15 минут уборки и 30 приседаний. Пока оно не выполнено, L2 не запускаем.</p><div><button class="btn red" id="payp">Штраф отработан</button></div></section>';$("payp").onclick=function(){mut(function(){Object.keys(S.pen).forEach(function(k){S.paid[k]=1});flash("Штраф закрыт")})}}else p.innerHTML="";
 }
-var TABS=[["today","Сегодня"],["train","Тренировка"],["food","Питание"],["read","Чтение"],["fin","Финансы"],["status","Статус"],["rules","Правила"],["setup","Настройки"]];
+var TABS=[["today","Сегодня"],["train","Тренировка"],["food","Питание"],["read","Чтение"],["fin","Финансы"],["body","Тело"],["status","Статус"],["rules","Правила"],["setup","Настройки"]];
 function renderNav(){var n=$("nav");n.innerHTML="";TABS.forEach(function(t){var b=document.createElement("button");b.textContent=t[1];b.setAttribute("role","tab");b.setAttribute("aria-selected",t[0]===tab);b.onclick=function(){go(t[0])};n.appendChild(b)})}
 function go(t){if(tab==="train"&&t!=="train"){camStop();var ro=$("restov");if(ro)ro.remove()}if(tab==="read"&&t!=="read")rdClose();tab=t;render()}
 function qRow(k,q){
@@ -202,15 +205,10 @@ function renderTrain(v){
  var p=plan();if(!p){v.innerHTML='<section class="win"><h2>Суббота</h2><p>Тренировки нет. Твоя нагрузка сегодня: прогулка с родителями.</p></section>';return}
  var k=key(),qw=questsFor(k).filter(function(q){return q.id==="workout"})[0],done=qw&&isDone(k,qw),total=p.ex.reduce(function(a,e){return a+e[1]+15},0);
  if(T.left===0&&!T.run)T.left=p.ex[T.i][1];var cur=p.ex[T.i];
- v.innerHTML='<div class="cols"><div class="stack"><section class="win timer"><h2>'+esc(p.n)+'</h2><div class="small dim">'+(T.rest?"Отдых. Дальше: ":"Упражнение "+(T.i+1)+" из "+p.ex.length)+'</div><h3 style="font-size:1.2rem">'+esc(cur[0])+'</h3><div id="fig"></div><div class="clock" id="clock">'+fmt(T.left)+'</div><p class="small dim">'+esc(cur[2])+'</p><div class="row" style="justify-content:center"><button class="btn" id="tgo">'+(T.run?"Пауза":done?"Повторить":"Старт")+'</button><button class="btn ghost" id="tskip">Дальше</button></div>'+(done?'<p class="small ok">Сегодняшняя тренировка закрыта.</p>':'<p class="small dim">Квест закроется после последнего упражнения.</p>')+'</section><section class="win"><div class="row between"><h2>Камера</h2><button class="btn mini" id="camb">'+(CAM.run?"Выключить":"Включить")+'</button></div><p class="small dim">Встань боком, всё тело в кадре. Видео остаётся на этом устройстве.</p><div class="camwrap" id="cw" style="margin-top:8px" '+(CAM.run?"":"hidden")+'><video id="cv" muted playsinline></video><canvas id="cc"></canvas></div><div class="hud" id="hud" style="margin-top:8px"></div><p class="small" id="cmsg"></p></section></div><section class="win"><div class="row between"><h2>План</h2><span class="mono dim">≈'+Math.round(total/60)+' мин</span></div><p class="small dim">Нажми на упражнение, чтобы посмотреть движение.</p><div>'+p.ex.map(function(e,i){return'<button class="ex '+(i===T.i?"cur":i<T.i?"past":"")+'" data-ex="'+i+'" style="width:100%;background:none;border-width:1px 0 0;border-color:#1a2d52;color:inherit;text-align:left"><span class="mono small">'+fmt(e[1])+'</span><span>'+esc(e[0])+'</span><span></span></button>'}).join("")+'</div><p class="small dim" style="margin-top:8px">Тянет можно. Острая боль в пояснице или суставе означает стоп.</p></section></div>';
+ v.innerHTML='<div class="cols"><div class="stack"><section class="win timer"><h2>'+esc(p.n)+'</h2><div class="small dim">'+(T.rest?"Отдых. Дальше: ":"Упражнение "+(T.i+1)+" из "+p.ex.length)+'</div><h3 style="font-size:1.2rem">'+esc(cur[0])+'</h3><div id="fig"></div><div class="clock" id="clock">'+fmt(T.left)+'</div><p class="small dim">'+esc(cur[2])+'</p><div class="row" style="justify-content:center"><button class="btn" id="tgo">'+(T.run?"Пауза":done?"Повторить":"Старт")+'</button><button class="btn ghost" id="tskip">Дальше</button></div>'+(done?'<p class="small ok">Сегодняшняя тренировка закрыта.</p>':'<p class="small dim">Квест закроется после последнего упражнения.</p>')+'</section></div><section class="win"><div class="row between"><h2>План</h2><span class="mono dim">≈'+Math.round(total/60)+' мин</span></div><p class="small dim">Нажми на упражнение, чтобы посмотреть движение.</p><div>'+p.ex.map(function(e,i){return'<button class="ex '+(i===T.i?"cur":i<T.i?"past":"")+'" data-ex="'+i+'" style="width:100%;background:none;border-width:1px 0 0;border-color:#1a2d52;color:inherit;text-align:left"><span class="mono small">'+fmt(e[1])+'</span><span>'+esc(e[0])+'</span><span></span></button>'}).join("")+'</div><p class="small dim" style="margin-top:8px">Тянет можно. Острая боль в пояснице или суставе означает стоп.</p></section></div>';
  mountFig($("fig"),figKey(T.view!=null&&!T.run?p.ex[T.i][0]:cur[0]));restUi();
  $("tgo").onclick=function(){T.run?pause():start()};$("tskip").onclick=function(){step(true)};
  v.querySelectorAll("[data-ex]").forEach(function(b){b.onclick=function(){mountFig($("fig"),figKey(p.ex[+b.dataset.ex][0]))}});
- function camUi(m){var r=CAM.rule,h=$("hud");if(!h)return;h.innerHTML='<span>'+(r.t==="reps"?"Повторы: "+CAM.reps:"Время: "+Math.floor(CAM.hold)+" с")+'</span><span class="'+(m.ok?"ok":"warn")+'">'+(m.ok?"Правильно":"Поправь")+'</span>';$("cmsg").textContent=m.text}
- if(CAM.run)camRebind($("cv"),$("cc"),figKey(cur[0]));
- $("camb").onclick=function(){if(CAM.run){camStop();render();return}$("cw").hidden=false;$("camb").textContent="Выключить";
-  camStart($("cv"),$("cc"),figKey(cur[0]),camUi)
-  .catch(function(){$("cw").hidden=true;$("camb").textContent="Включить";$("cmsg").textContent="Камера недоступна. Разреши доступ к камере в настройках устройства."})};
 }
 function restUi(){
  var o=$("restov");if(!T.run||!T.rest||tab!=="train"){if(o)o.remove();return}
@@ -251,11 +249,24 @@ function renderSetup(v){
  $("bgf").onchange=function(e){var f=e.target.files[0];if(f)idbPut("bg",f).then(function(){setBg("image",f)}).catch(function(){flash("Не получилось сохранить картинку")})};
  $("csave").onclick=function(){CFG.owner=$("cowner").value.trim();CFG.repo=$("crepo").value.trim();CFG.token=$("ctok").value.trim();if($("cfold")){CFG.folder=$("cfold").value.trim();PC.setFolder(CFG.folder)}try{localStorage.setItem(LC,JSON.stringify(CFG))}catch(e){}sync();flash("Сохранено")};
 }
-function render(){renderHead();renderNav();if(tab==="read"&&RD.doc)return;({fin:renderFin,read:renderRead,today:renderToday,train:renderTrain,food:renderFood,status:renderStatus,rules:renderRules,setup:renderSetup}[tab])($("view"))}
+function render(){renderHead();renderNav();if(tab==="read"&&RD.doc)return;({body:renderBody,fin:renderFin,read:renderRead,today:renderToday,train:renderTrain,food:renderFood,status:renderStatus,rules:renderRules,setup:renderSetup}[tab])($("view"))}
 
 /* Напоминания на ПК: приходят только по незакрытым квестам */
 var SCH=[["10:30",[1,2,3,4,5],"breaks","Перерыв","Встань, разомни ноги и спину, выпей воды."],["13:00",[1,2,3,4,5],"lunch","Обед","Положи фото тарелки в папку Hunter."],["15:00",[1,2,3,4,5],"breaks","Перерыв","Встань, разомнись и выпей воды."],["17:15",[1,2,3,4,5],"workout","Конец работы","Вода, тренировка и порядок до 18:00. Потом L2."],["17:00",[0],"review","Итог недели","Посмотри неделю и реши, что поменять."],["22:45",[0,1,2,3,4,5],"read","Закрой день","Запиши траты, почитай и готовься ко сну."]],sent={};
-function notifyTick(){if(!PC)return;var n=new Date(),hm=pad(n.getHours())+":"+pad(n.getMinutes()),k=key();if(hm==="10:05"&&!sent[k+"fin"]){sent[k+"fin"]=1;var fo=finOverdue();if(fo.length)PC.notify("СИСТЕМА: Финансы","Подтверди: "+fo.map(function(x){return x.name}).join(", ")+".")}SCH.forEach(function(s){var id=k+s[0];if(s[0]!==hm||sent[id]||s[1].indexOf(n.getDay())<0)return;sent[id]=1;var q=questsFor(k).filter(function(x){return x.id===s[2]})[0];if(q&&isDone(k,q))return;PC.notify("СИСТЕМА: "+s[3],s[4])})}
+function notifyTick(){if(!PC)return;var n=new Date(),hm=pad(n.getHours())+":"+pad(n.getMinutes()),k=key();if(hm==="10:05"&&!sent[k+"fin"]){sent[k+"fin"]=1;if(S.body){var bd=bodyDates();if(bd.length&&k>=next(bd[bd.length-1],30))return"Прошло 30 дней: пора сделать замер тела.";}
+ var fo=finOverdue();if(fo.length)PC.notify("СИСТЕМА: Финансы","Подтверди: "+fo.map(function(x){return x.name}).join(", ")+".")}SCH.forEach(function(s){var id=k+s[0];if(s[0]!==hm||sent[id]||s[1].indexOf(n.getDay())<0)return;sent[id]=1;var q=questsFor(k).filter(function(x){return x.id===s[2]})[0];if(q&&isDone(k,q))return;PC.notify("СИСТЕМА: "+s[3],s[4])})}
+/* Тело */
+var BODY=[["weight","Вес","кг","Утром, после туалета, до еды"],["waist","Талия","см","На уровне пупка, на выдохе, не втягивая живот"],["hips","Бёдра","см","По самой широкой части ягодиц"],["chest","Грудь","см","По сосковой линии, на спокойном вдохе"],["thigh","Бедро","см","Самая широкая часть, стоя"],["calf","Икра","см","Самая широкая часть, стоя"],["reach","Наклон до пола","см","Сколько не хватает пальцам до пола. 0 значит достал"],["split","Шпагат до пола","см","Высота от паха до пола в самом глубоком положении"]];
+function bodyDates(){return Object.keys(S.body||{}).filter(function(k){return!S.body[k].del}).sort()}
+function bodySpark(pts){if(pts.length<2)return"";var W=120,H=34,vs=pts.map(function(p){return p.v}),lo=Math.min.apply(null,vs),hi=Math.max.apply(null,vs),rg=hi-lo||1,c=pts.map(function(p,i){return[4+i*(W-10)/(pts.length-1),H-5-(p.v-lo)*(H-10)/rg]}),l=c[c.length-1];return'<svg viewBox="0 0 '+W+' '+H+'" class="spark" aria-hidden="true"><polyline points="'+c.map(function(x){return x[0].toFixed(1)+","+x[1].toFixed(1)}).join(" ")+'"/><circle cx="'+l[0].toFixed(1)+'" cy="'+l[1].toFixed(1)+'" r="3"/></svg>'}
+function renderBody(v){
+ S.body=S.body||{};var ds=bodyDates(),last=ds[ds.length-1],k=key(),nextD=last?next(last,30):null,due=nextD&&k>=nextD,prev=last?S.body[last]:{};
+ var rows=BODY.map(function(b){var pts=ds.filter(function(d){return S.body[d][b[0]]!=null}).map(function(d){return{d:d,v:S.body[d][b[0]]}}),cur=pts.length?pts[pts.length-1].v:null,first=pts.length?pts[0].v:null,df=pts.length>1?Math.round((cur-first)*10)/10:null;return'<div class="bm"><div style="min-width:0"><div>'+b[1]+'</div><span class="small dim">'+(df==null?"Первый замер":"С начала: "+(df>0?"+":"")+df+" "+b[2])+'</span></div>'+bodySpark(pts)+'<span class="mono">'+(cur==null?"–":cur+" "+b[2])+'</span></div>'}).join("");
+ v.innerHTML='<div class="cols"><section class="win"><h2>Параметры</h2><p class="small dim">'+(last?"Последний замер: "+last.split("-").reverse().join(".")+". "+(due?"Пора сделать новый.":"Следующий: "+nextD.split("-").reverse().join(".")):"Первый замер сделай, когда купишь ленту.")+'</p><div style="margin-top:6px">'+rows+'</div></section><section class="win"><h2>Новый замер</h2><div style="display:grid;gap:8px;margin-top:8px"><label class="f">Дата<input type="date" id="bd" value="'+k+'"></label>'+BODY.map(function(b){return'<label class="f">'+b[1]+', '+b[2]+'<input type="number" step="0.1" min="0" inputmode="decimal" id="b_'+b[0]+'" placeholder="'+esc(b[3])+'"></label>'}).join("")+'<div><button class="btn" id="bsave">Сохранить замер</button></div><p class="small dim">Заполняй только то, что измерил. Меряй в одно время, лучше утром.</p></div></section></div>'+(ds.length?'<section class="win"><h2>История</h2><div>'+ds.slice().reverse().map(function(d){var x=S.body[d];return'<div class="fe"><div style="min-width:0">'+d.split("-").reverse().join(".")+'<div class="small dim">'+BODY.filter(function(b){return x[b[0]]!=null}).map(function(b){return b[1]+" "+x[b[0]]}).join(", ")+'</div></div><span></span><button class="btn ghost mini" data-bm="'+d+'" aria-label="Удалить замер">×</button></div>'}).join("")+'</div></section>':'');
+ $("bsave").onclick=function(){var d=$("bd").value,o={u:Date.now()},n=0;BODY.forEach(function(b){var val=$("b_"+b[0]).value;if(val!==""){o[b[0]]=+val;n++}});if(!d)return flash("Выбери дату");if(!n)return flash("Заполни хотя бы один параметр");mut(function(){S.body[d]=o;flash("Замер сохранён")})};
+ v.querySelectorAll("[data-bm]").forEach(function(b){b.onclick=function(){mut(function(){S.body[b.dataset.bm]={del:true,u:Date.now()}})}});
+}
+
 /* Финансы */
 var FV={ym:null},FTYPE={once:"Разовая трата",month:"Ежемесячная трата",force:"Форс-мажор",income:"Приход"},INCOME_GOAL=50000;
 function fin(){S.fin=S.fin||{e:{},m:{}};S.fin.e=S.fin.e||{};S.fin.m=S.fin.m||{};if(!S.fin.m.salary)S.fin.m.salary={name:"Зарплата",amt:0,day:12,kind:"inc",from:S.start.slice(0,7),u:1};return S.fin}
