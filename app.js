@@ -15,19 +15,26 @@ var S=fresh(),CFG={owner:"andryxax922x-sudo",repo:"hunter-data",token:"",folder:
 try{S=JSON.parse(localStorage.getItem(LS))||S}catch(e){}
 try{Object.assign(CFG,JSON.parse(localStorage.getItem(LC))||{})}catch(e){}
 if(!S.custom)S.custom=JSON.parse(JSON.stringify(PRESET));
-function lvlFrom(xp){var l=1,need=350;while(xp>=need){xp-=need;l++;need=350+42*(l-1)}return{l:l,cur:xp,need:need}}
+function lvlFrom(xp){var l=1,need=400;while(xp>=need){xp-=need;l++;need=400+48*(l-1)}return{l:l,cur:xp,need:need}}
 function rankOf(l){return l>=70?"S":l>=50?"A":l>=35?"B":l>=20?"C":l>=10?"D":"E"}
 function D(k){k=k||key();return S.days[k]||(S.days[k]={done:{},water:0,breaks:0,meals:[],u:0})}
 function questsFor(k){
  var w=parse(k).getDay(),q=[];
  function a(id,t,s,xp,hard,mode,sub){q.push({id:id,t:t,s:s,xp:xp,hard:hard,mode:mode,sub:sub})}
- a("water","Вода: 6 стаканов","vit",20,true,"water","Киссон рядом с рабочим местом");
+ var neu=k>="2026-11-03";a("water",neu?"Вода и напитки: 6 стаканов":"Вода: 6 стаканов","vit",20,true,"water",neu?"Вода, чай, суп. Кофе не больше 2 чашек":"Киссон рядом с рабочим местом");
  if(w===6){a("family","День с родителями и прогулка","cha",40,true,"tick")}
  else{
   if(w!==0)a("breakfast","Завтрак до 10:30","vit",20,true,"meal","Фото или отметка");
   if(w!==0)a("lunch","Обед с фото","vit",30,true,"photo","Закроется, когда Система получит фото");
   a("workout","Тренировка: "+EX[PLAN[w]].n,/flex|long/.test(PLAN[w])?"flx":"str",50,true,"workout","Закроется после таймера");
-  a("tidy","Порядок 10 минут: "+CHORE[w],"wil",25,true,"tick");
+  if(!neu)a("tidy","Порядок 10 минут: "+CHORE[w],"wil",25,true,"tick");
+  else{
+   if(w>=1&&w<=5)a("dinner","Ужин: что угодно, хоть чай с бутербродом","vit",20,true,"meal","Фото по желанию");
+   a("dishes","Посуда","wil",15,true,"tick");
+   if(w===1||w===3||w===5)a("trash","Протереть стол и вынести мусор","wil",15,true,"tick");
+   if(w===4)a("floors","Полы во всей комнате","wil",30,true,"tick");
+   if(w===0){var dn=parse(k).getDate(),wk=Math.ceil(dn/7),big={1:"Уборка кухни",2:"Уборка ванной",3:"Уборка балкона"}[wk];if(big)a("big"+wk,big,"wil",50,true,"tick","Раз в месяц")}
+  }
   a("money","Записать траты за день","gold",15,true,"money");
   a("read","Чтение 15 минут вместо серии","int",25,true,"tick");
  }
@@ -107,7 +114,7 @@ function toJpeg(blob){return createImageBitmap(blob).then(function(bm){var s=Mat
 function addPhoto(blob,slot,when){
  when=when||new Date();var k=key(when),id=k+"_"+pad(when.getHours())+pad(when.getMinutes())+pad(when.getSeconds())+"_"+({"Завтрак":"breakfast","Обед":"lunch","Ужин":"dinner","Перекус":"snack"}[slot]||"meal");
  return toJpeg(blob).then(function(b64){
-  function local(){mut(function(){var d=D(k);d.meals=d.meals||[];d.meals.push({id:id,slot:slot});var qid=slot==="Завтрак"?"breakfast":slot==="Обед"?"lunch":null,q=qid&&questsFor(k).filter(function(x){return x.id===qid})[0];if(q)setDone(k,q,true)},k)}
+  function local(){mut(function(){var d=D(k);d.meals=d.meals||[];d.meals.push({id:id,slot:slot});var qid=slot==="Завтрак"?"breakfast":slot==="Обед"?"lunch":slot==="Ужин"?"dinner":null,q=qid&&questsFor(k).filter(function(x){return x.id===qid})[0];if(q)setDone(k,q,true)},k)}
   if(!CFG.token){local();flash("Фото принято. Оценка заработает после настройки");return}
   return api("inbox/"+id+".jpg",{method:"PUT",body:JSON.stringify({message:"photo",content:b64})}).then(function(r){if(!r.ok)throw new Error("upload");local();flash("Фото отправлено на оценку");sync()});
  });
@@ -115,7 +122,7 @@ function addPhoto(blob,slot,when){
 function mealsOf(d){var del=S.mealDel||{};return((d&&d.meals)||[]).filter(function(m){return!del[m.id]})}
 function delMeal(k,id){
  mut(function(){S.mealDel=S.mealDel||{};S.mealDel[id]=1;var d=D(k),left=mealsOf(d);
-  [["Завтрак","breakfast"],["Обед","lunch"]].forEach(function(p){if(left.some(function(m){return m.slot===p[0]}))return;var had=(d.meals||[]).some(function(m){return m.id===id&&m.slot===p[0]});var q=questsFor(k).filter(function(x){return x.id===p[1]})[0];if(had&&q)setDone(k,q,false)});
+  [["Завтрак","breakfast"],["Обед","lunch"],["Ужин","dinner"]].forEach(function(p){if(left.some(function(m){return m.slot===p[0]}))return;var had=(d.meals||[]).some(function(m){return m.id===id&&m.slot===p[0]});var q=questsFor(k).filter(function(x){return x.id===p[1]})[0];if(had&&q)setDone(k,q,false)});
   flash("Фото удалено")},k);
  if(CFG.token)api("inbox/"+id+".jpg").then(function(r){return r.ok?r.json():null}).then(function(f){if(f)return api("inbox/"+id+".jpg",{method:"DELETE",body:JSON.stringify({message:"remove photo",sha:f.sha})})}).catch(function(){});
  sync();
@@ -235,7 +242,7 @@ function renderStatus(v){
  var avg=all.length?(all.reduce(function(a,x){return a+(+x.score||0)},0)/all.length).toFixed(1):"–";
  v.innerHTML='<div class="cols"><section class="win"><h2>Характеристики</h2><div style="margin-top:6px">'+Object.keys(STATS).map(function(s){var val=stat(s,t);return'<div class="stat"><b>'+STATS[s].n+'</b><span class="v">'+val+'</span><div class="bar"><i style="width:'+Math.min(100,val)+'%"></i></div><span class="why">'+STATS[s].why+'</span></div>'}).join("")+'</div></section><div class="stack"><section class="win"><h2>За 7 дней</h2><div class="row between" style="margin-top:6px"><span>Средняя оценка еды</span><span class="mono">'+avg+'</span></div><div class="row between"><span>Записанные траты</span><span class="mono">'+sp+'</span></div></section><section class="win"><h2>Журнал Системы</h2>'+(S.log.length?'<ul class="plain small">'+S.log.map(function(l){return"<li>"+esc(l)+"</li>"}).join("")+'</ul>':'<p class="small dim">Штрафов и потерь пока нет.</p>')+'</section></div></div>';
 }
-function renderRules(v){v.innerHTML='<section class="win"><h2>Как работает Система</h2><ul class="plain"><li>Опыт идёт за квесты. Обязательные решают исход дня.</li><li>Ранги: E с 1 уровня, D с 10, C с 20, B с 35, A с 50, S с 70.</li><li>Характеристика растёт примерно на 1 за две недели регулярных квестов.</li><li>Навык без тренировки 7 дней теряет 1 пункт.</li></ul></section><section class="win"><h2>Последствия</h2><ul class="plain"><li>За каждый незакрытый обязательный квест минус 15 XP. Уровень может упасть.</li><li>На следующий день открывается штрафная зона: 15 минут уборки и 30 приседаний до входа в L2.</li><li>Неотработанный штраф при новом пропуске стоит ещё 50 XP.</li><li>Пропуск многих дней считается максимум за 3 дня.</li><li>Форс-мажор снимает штраф за день. Используй его честно.</li></ul></section>'}
+function renderRules(v){v.innerHTML='<section class="win"><h2>Как работает Система</h2><ul class="plain"><li>Опыт идёт за квесты. Обязательные решают исход дня.</li><li>Ранги: E с 1 уровня, D с 10, C с 20, B с 35, A с 50, S с 70.</li><li>Характеристика растёт примерно на 1 за две недели регулярных квестов.</li><li>Навык без тренировки 7 дней теряет 1 пункт.</li></ul></section><section class="win"><h2>График дел</h2><ul class="plain"><li>Каждый день, кроме субботы: посуда.</li><li>Понедельник, среда, пятница: стол и мусор.</li><li>Четверг: полы во всей комнате.</li><li>Воскресенье: 1-е в месяце кухня, 2-е ванная, 3-е балкон.</li></ul></section><section class="win"><h2>Последствия</h2><ul class="plain"><li>За каждый незакрытый обязательный квест минус 15 XP. Уровень может упасть.</li><li>На следующий день открывается штрафная зона: 15 минут уборки и 30 приседаний до входа в L2.</li><li>Неотработанный штраф при новом пропуске стоит ещё 50 XP.</li><li>Пропуск многих дней считается максимум за 3 дня.</li><li>Форс-мажор снимает штраф за день. Используй его честно.</li></ul></section>'}
 function renderSetup(v){
  v.innerHTML='<section class="win"><h2>Синхронизация</h2><p class="small dim">Токен хранится только на этом устройстве. Данные обновляются раз в 5 минут и по кнопке «Синхр.».</p><div style="display:grid;gap:8px;margin-top:8px"><label class="f">Владелец<input type="text" id="cowner" value="'+esc(CFG.owner)+'"></label><label class="f">Репозиторий данных<input type="text" id="crepo" value="'+esc(CFG.repo)+'"></label><label class="f">Токен GitHub<input type="password" id="ctok" value="'+esc(CFG.token)+'" autocomplete="off"></label>'+(PC?'<label class="f">Папка для фото<input type="text" id="cfold" value="'+esc(CFG.folder)+'"></label>':'')+'<div><button class="btn" id="csave">Сохранить и проверить</button></div></div></section><section class="win"><h2>Фон</h2><div class="row" style="margin-top:8px">'+[["gate","Врата"],["shadow","Армия теней"],["image","Своя картинка"],["none","Без фона"]].map(function(o){return'<button class="btn '+(CFG.bg===o[0]?"":"ghost")+'" data-bg="'+o[0]+'">'+o[1]+'</button>'}).join("")+'</div><input id="bgf" type="file" accept="image/*" hidden><p class="small dim" style="margin-top:8px">Своя картинка хранится на этом устройстве.</p></section>'+(PC?'<section class="win"><h2>Запуск</h2><p class="small">Программа запускается вместе с Windows и живёт в трее. Крестик сворачивает её, выход через значок в трее.</p></section>':'<section class="win"><h2>Закладка на телефоне</h2><p class="small">Открой этот адрес в браузере и добавь его в закладки. Токен нужно ввести один раз на этом телефоне.</p></section>');
  function setBg(n,blob){CFG.bg=n;try{localStorage.setItem(LC,JSON.stringify(CFG))}catch(e){}scSet(n,blob);render()}
