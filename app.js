@@ -146,7 +146,7 @@ function renderHead(){
 }
 var TABS=[["today","Сегодня"],["train","Тренировка"],["food","Питание"],["read","Чтение"],["fin","Финансы"],["status","Статус"],["rules","Правила"],["setup","Настройки"]];
 function renderNav(){var n=$("nav");n.innerHTML="";TABS.forEach(function(t){var b=document.createElement("button");b.textContent=t[1];b.setAttribute("role","tab");b.setAttribute("aria-selected",t[0]===tab);b.onclick=function(){go(t[0])};n.appendChild(b)})}
-function go(t){if(tab==="train"&&t!=="train")camStop();if(tab==="read"&&t!=="read")rdClose();tab=t;render()}
+function go(t){if(tab==="train"&&t!=="train"){camStop();var ro=$("restov");if(ro)ro.remove()}if(tab==="read"&&t!=="read")rdClose();tab=t;render()}
 function qRow(k,q){
  var d=D(k),done=isDone(k,q),auto=["workout","water","breaks","money","photo"].indexOf(q.mode)>=0;
  var h='<div class="q'+(done?" done":"")+'"><button class="box" data-q="'+q.id+'" aria-label="Отметить: '+esc(q.t)+'" '+(auto?"disabled":"")+'>'+(done?"✓":"")+'</button><div style="min-width:0"><div class="t">'+esc(q.t)+'</div>';
@@ -195,7 +195,7 @@ function renderTrain(v){
  var k=key(),qw=questsFor(k).filter(function(q){return q.id==="workout"})[0],done=qw&&isDone(k,qw),total=p.ex.reduce(function(a,e){return a+e[1]+15},0);
  if(T.left===0&&!T.run)T.left=p.ex[T.i][1];var cur=p.ex[T.i];
  v.innerHTML='<div class="cols"><div class="stack"><section class="win timer"><h2>'+esc(p.n)+'</h2><div class="small dim">'+(T.rest?"Отдых. Дальше: ":"Упражнение "+(T.i+1)+" из "+p.ex.length)+'</div><h3 style="font-size:1.2rem">'+esc(cur[0])+'</h3><div id="fig"></div><div class="clock" id="clock">'+fmt(T.left)+'</div><p class="small dim">'+esc(cur[2])+'</p><div class="row" style="justify-content:center"><button class="btn" id="tgo">'+(T.run?"Пауза":done?"Повторить":"Старт")+'</button><button class="btn ghost" id="tskip">Дальше</button></div>'+(done?'<p class="small ok">Сегодняшняя тренировка закрыта.</p>':'<p class="small dim">Квест закроется после последнего упражнения.</p>')+'</section><section class="win"><div class="row between"><h2>Камера</h2><button class="btn mini" id="camb">'+(CAM.run?"Выключить":"Включить")+'</button></div><p class="small dim">Встань боком, всё тело в кадре. Видео остаётся на этом устройстве.</p><div class="camwrap" id="cw" style="margin-top:8px" '+(CAM.run?"":"hidden")+'><video id="cv" muted playsinline></video><canvas id="cc"></canvas></div><div class="hud" id="hud" style="margin-top:8px"></div><p class="small" id="cmsg"></p></section></div><section class="win"><div class="row between"><h2>План</h2><span class="mono dim">≈'+Math.round(total/60)+' мин</span></div><p class="small dim">Нажми на упражнение, чтобы посмотреть движение.</p><div>'+p.ex.map(function(e,i){return'<button class="ex '+(i===T.i?"cur":i<T.i?"past":"")+'" data-ex="'+i+'" style="width:100%;background:none;border-width:1px 0 0;border-color:#1a2d52;color:inherit;text-align:left"><span class="mono small">'+fmt(e[1])+'</span><span>'+esc(e[0])+'</span><span></span></button>'}).join("")+'</div><p class="small dim" style="margin-top:8px">Тянет можно. Острая боль в пояснице или суставе означает стоп.</p></section></div>';
- mountFig($("fig"),figKey(T.view!=null&&!T.run?p.ex[T.i][0]:cur[0]));
+ mountFig($("fig"),figKey(T.view!=null&&!T.run?p.ex[T.i][0]:cur[0]));restUi();
  $("tgo").onclick=function(){T.run?pause():start()};$("tskip").onclick=function(){step(true)};
  v.querySelectorAll("[data-ex]").forEach(function(b){b.onclick=function(){mountFig($("fig"),figKey(p.ex[+b.dataset.ex][0]))}});
  function camUi(m){var r=CAM.rule,h=$("hud");if(!h)return;h.innerHTML='<span>'+(r.t==="reps"?"Повторы: "+CAM.reps:"Время: "+Math.floor(CAM.hold)+" с")+'</span><span class="'+(m.ok?"ok":"warn")+'">'+(m.ok?"Правильно":"Поправь")+'</span>';$("cmsg").textContent=m.text}
@@ -204,9 +204,15 @@ function renderTrain(v){
   camStart($("cv"),$("cc"),figKey(cur[0]),camUi)
   .catch(function(){$("cw").hidden=true;$("camb").textContent="Включить";$("cmsg").textContent="Камера недоступна. Разреши доступ к камере в настройках устройства."})};
 }
+function restUi(){
+ var o=$("restov");if(!T.run||!T.rest||tab!=="train"){if(o)o.remove();return}
+ var p=plan(),n=p?p.ex[T.i]:null;
+ if(!o){o=document.createElement("div");o.id="restov";o.innerHTML='<div class="rl">ПЕРЕРЫВ</div><div class="rn" id="rtime"></div><div class="rnext" id="rnext"></div><div class="row" style="justify-content:center"><button class="btn" id="rpause">Пауза</button><button class="btn ghost" id="rgo">Пропустить</button></div>';document.body.appendChild(o);$("rpause").onclick=pause;$("rgo").onclick=function(){step(true)}}
+ $("rtime").textContent=T.left;$("rnext").textContent=n?"Дальше: "+n[0]:"";
+}
 function start(){T.run=true;beep();try{navigator.wakeLock&&navigator.wakeLock.request("screen").catch(function(){})}catch(e){}T.h=setInterval(tick,1000);render()}
-function pause(){T.run=false;clearInterval(T.h);render()}
-function tick(){T.left--;if(T.left<=0){beep();step(false);return}var c=$("clock");if(c)c.textContent=fmt(T.left)}
+function pause(){T.run=false;clearInterval(T.h);restUi();render()}
+function tick(){T.left--;if(T.left<=0){beep();step(false);return}if(T.rest&&T.left<=3)beep();var c=$("clock");if(c)c.textContent=fmt(T.left);restUi()}
 function step(skip){
  var p=plan();if(!p)return;
  if(!T.rest&&!skip){if(T.i>=p.ex.length-1){finish();return}T.rest=true;T.left=15;T.i++;render();return}
@@ -214,7 +220,7 @@ function step(skip){
  if(T.i>=p.ex.length-1){flash("Пропуск не закрывает квест");clearInterval(T.h);T.run=false;T.i=0;T.left=p.ex[0][1];render();return}
  T.i++;T.left=p.ex[T.i][1];render();
 }
-function finish(){clearInterval(T.h);T.run=false;T.rest=false;T.i=0;T.left=0;var k=key(),q=questsFor(k).filter(function(x){return x.id==="workout"})[0];mut(function(){if(q)setDone(k,q,true)})}
+function finish(){clearInterval(T.h);T.run=false;var ro=$("restov");if(ro)ro.remove();T.rest=false;T.i=0;T.left=0;var k=key(),q=questsFor(k).filter(function(x){return x.id==="workout"})[0];mut(function(){if(q)setDone(k,q,true)})}
 function renderFood(v){
  var k=key(),d=D(k),m=mealsOf(d),r=m.map(function(x){return S.ratings[x.id]}).filter(Boolean),avg=r.length?(r.reduce(function(a,x){return a+(+x.score||0)},0)/r.length).toFixed(1):"–",lo=r.reduce(function(a,x){return a+(+x.kmin||0)},0),hi=r.reduce(function(a,x){return a+(+x.kmax||0)},0),pr=r.reduce(function(a,x){return a+(+x.protein||0)},0);
  v.innerHTML='<div class="cols"><section class="win"><h2>Фото еды</h2><p class="small dim">'+(PC?"Выбери файл здесь или положи фото в папку "+esc(CFG.folder)+".":"Сфотографируй тарелку сверху.")+' Обед и ужин оцениваются за несколько минут. Калории по фото примерные.</p><div class="row" style="margin-top:8px"><select id="slot" aria-label="Приём пищи">'+["Завтрак","Обед","Ужин","Перекус"].map(function(s){return'<option'+(s===slotBy(new Date().getHours())?" selected":"")+'>'+s+'</option>'}).join("")+'</select><input id="mfile" type="file" accept="image/*" capture="environment" hidden><button class="btn" id="mbtn">Добавить фото</button></div><p class="small" id="mout" style="margin-top:8px"></p></section><section class="win"><h2>Сегодня</h2><div class="row between" style="margin-top:6px"><span>Средняя оценка</span><span class="mono">'+avg+'</span></div><div class="row between"><span>Калории</span><span class="mono">'+(r.length?lo+"–"+hi:"–")+'</span></div><div class="row between"><span>Белок</span><span class="mono">'+(r.length?"≈"+pr+" г":"–")+'</span></div><div style="margin-top:8px">'+(m.length?m.map(function(x){var a=S.ratings[x.id];var delb=askDel===x.id?'<div class="counter"><span class="small warn">Удалить это фото?</span><button class="btn red mini" data-mdel="'+esc(x.id)+'">Да</button><button class="btn ghost mini" data-mno="1">Нет</button></div>':'<div class="counter"><button class="btn ghost mini" data-mask="'+esc(x.id)+'">Удалить</button></div>';if(!a)return'<div class="meal"><div class="score">…</div><div><b>'+esc(x.slot)+'</b><div class="small dim">Ждёт оценки</div>'+delb+'</div></div>';var s=+a.score;return'<div class="meal"><div class="score '+(s<5?"low":s>=8?"high":"")+'">'+esc(a.score)+'</div><div style="min-width:0"><b>'+esc(x.slot)+'</b>: '+esc(a.name)+'<div class="small dim">'+esc(a.kmin)+'–'+esc(a.kmax)+' ккал, белок ≈'+esc(a.protein)+' г</div><div class="small">'+esc(a.fix)+'</div>'+delb+'</div></div>'}).join(""):'<p class="small dim">Пока нет ни одной тарелки.</p>')+'</div></section></div>';

@@ -90,7 +90,7 @@ textarea{width:100%;resize:vertical}
 .day.now{box-shadow:0 0 0 1px var(--glow) inset}
 
 .timer{text-align:center;display:grid;gap:8px}
-.timer .clock{font:600 4rem/1 var(--mono);color:var(--glow);text-shadow:0 0 18px #57c7ff88}
+.timer .clock{font:600 clamp(5rem,17vh,10rem)/1 var(--mono);color:var(--glow);text-shadow:0 0 18px #57c7ff88}
 .ex{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;padding:8px 0;border-top:1px solid #1a2d52}
 .ex.cur{color:var(--glow)} .ex.past{color:var(--dim)}
 .out{white-space:pre-wrap;border-left:2px solid var(--glow);padding-left:10px}
@@ -150,3 +150,9 @@ input[type=date]{background:#081126;border:1px solid var(--line);padding:8px;min
 .cover b{font:400 1.05rem/1.25 var(--display);text-wrap:balance}
 .cover .cg{font:400 .68rem var(--mono);letter-spacing:.08em;text-transform:uppercase;opacity:.85}
 .cover .ca{font-size:.82rem;opacity:.9}
+
+.timer h3{font-size:clamp(1.3rem,3.5vh,2rem)!important}
+#restov{position:fixed;inset:0;z-index:40;background:#040a18f5;display:grid;place-content:center;gap:clamp(10px,3vh,28px);text-align:center;padding:16px}
+#restov .rl{font:400 clamp(3rem,16vw,11rem)/1 var(--display);color:var(--gold);letter-spacing:.04em}
+#restov .rn{font:600 clamp(7rem,38vh,24rem)/1 var(--mono);color:var(--glow);text-shadow:0 0 28px #57c7ff88}
+#restov .rnext{font-size:clamp(1.2rem,4vh,2.4rem);color:var(--fg)}
