@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Система Охотника</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Система">
+<meta name="theme-color" content="#060b18">
+<link rel="stylesheet" href="style.css">
+</head><body>
+<div class="wrap">
+ <header class="win head"><div class="rank" id="rank">E</div>
+  <div style="min-width:0;display:grid;gap:6px">
+   <div class="row between"><h1 id="title">Охотник</h1><button class="btn ghost mini" id="syncb">Синхр.</button></div>
+   <div class="row between small"><span id="lvl">Уровень 1</span><span class="mono dim" id="xpt"></span></div>
+   <div class="bar"><i id="xpb" style="width:0"></i></div>
+   <span class="sync" id="sync"></span>
+  </div></header>
+ <section class="win say" aria-live="polite"><div class="tag">[ СИСТЕМА ]</div><p id="say"></p></section>
+ <div id="penalty"></div>
+ <nav role="tablist" id="nav"></nav>
+ <main id="view" class="stack"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="data.js"></script>
+<script src="figures.js"></script>
+<script src="vendor/pose.js"></script>
+<script src="camera.js"></script>
+<script src="app.js"></script>
+</body></html>
