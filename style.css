@@ -143,3 +143,10 @@ body.reading .rbar:hover,body.reading .rfoot:hover,body.reading .rbar:focus-with
 .binc{fill:#2f8ccb;background:#2f8ccb}.bexp{fill:#c0841f;background:#c0841f}
 .lg{display:inline-block;width:10px;height:10px;margin-right:6px}
 input[type=date]{background:#081126;border:1px solid var(--line);padding:8px;min-width:0;color-scheme:dark}
+
+.recs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:10px}
+.rec{min-width:0;display:grid;gap:6px;align-content:start}
+.cover{aspect-ratio:2/3;max-width:100%;display:flex;flex-direction:column;justify-content:space-between;padding:12px;border:1px solid #ffffff22;box-shadow:0 6px 16px #0008;color:#fff}
+.cover b{font:400 1.05rem/1.25 var(--display);text-wrap:balance}
+.cover .cg{font:400 .68rem var(--mono);letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+.cover .ca{font-size:.82rem;opacity:.9}
