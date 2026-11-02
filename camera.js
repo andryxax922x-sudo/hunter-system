@@ -4,9 +4,10 @@ var IDX={ls:11,rs:12,lh:23,rh:24,lk:25,rk:26,la:27,ra:28,le:13,re:14,lw:15,rw:16
 var LINKS=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
 function ang(a,b,c){var x=Math.atan2(c.y-b.y,c.x-b.x)-Math.atan2(a.y-b.y,a.x-b.x),d=Math.abs(x*180/Math.PI);return d>180?360-d:d}
 function camRule(key){
- if(key==="squat")return{t:"reps",j:"knee",down:105,up:160,tip:"Садись ниже: угол в колене до 105°"};
+ if(key==="squat"||key==="bw")return{t:"reps",j:"knee",down:105,up:160,tip:"Садись ниже: угол в колене до 105°"};
  if(key==="rdl")return{t:"reps",j:"hip",down:115,up:160,tip:"Отводи таз назад до наклона"};
  if(key==="bridge")return{t:"reps",j:"hip",down:135,up:165,tip:"Поднимай таз до прямой линии"};
+ if(key==="back")return{t:"reps",j:"knee",down:115,up:160,tip:"Шаг назад, колено вниз, затем вверх"};
  if(key==="plank"||key==="side")return{t:"hold",min:160,max:195,tip:"Прямая линия от плеча до стопы"};
  return{t:"track",tip:"Камера показывает положение тела и считает время"};
 }

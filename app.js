@@ -26,7 +26,7 @@ function questsFor(k){
  else{
   if(w!==0)a("breakfast","Завтрак до 10:30","vit",20,true,"meal","Фото или отметка");
   if(w!==0)a("lunch","Обед с фото","vit",30,true,"photo","Закроется, когда Система получит фото");
-  a("workout","Тренировка: "+EX[PLAN[w]].n,/flex|long/.test(PLAN[w])?"flx":"str",50,true,"workout","Закроется после таймера");
+  var pid=planId(k,w);a("workout","Тренировка: "+EX[pid].n,/flex|long|m2|m4/.test(pid)?"flx":"str",50,true,"workout","Закроется после таймера");
   if(!neu)a("tidy","Порядок 10 минут: "+CHORE[w],"wil",25,true,"tick");
   else{
    if(w>=1&&w<=5)a("dinner","Ужин: что угодно, хоть чай с бутербродом","vit",20,true,"meal","Фото по желанию");
@@ -41,6 +41,7 @@ function questsFor(k){
  if(w>=1&&w<=5)a("breaks","Перерывы: 3 раза встать и размяться","vit",15,false,"breaks");
  a("sleep","Лечь до 24:00","vit",15,false,"tick");
  a("nocaf","Без энергетика и кофе после 15:00","vit",10,false,"tick");
+ if(k>="2026-11-03")a("walk","Прогулка 15–20 минут","vit",15,false,"tick","Если безопасно выйти. Магазин тоже считается");
  if(w!==6)a("step","25 минут на идею дохода","gold",30,false,"tick");
  if(w!==6)a("social","Один короткий контакт: написать другу или брату, спросить что-то в магазине","cha",20,false,"tick");
  if(w===0)a("review","Итог недели: что сработало, что менять","wil",40,true,"tick");
@@ -194,7 +195,7 @@ function renderToday(v){
  $("shield").onclick=function(){mut(function(){var d=D(k);d.shield=!d.shield})};
 }
 var T={i:0,left:0,run:false,h:null,rest:false,view:0};
-function plan(){var w=new Date().getDay();return PLAN[w]!==undefined?EX[PLAN[w]]:null}
+function plan(){var w=new Date().getDay(),id=planId(key(),w);return id?EX[id]:null}
 function beep(){try{var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.08;o.start();o.stop(a.currentTime+.18)}catch(e){}}
 function fmt(s){return pad(Math.floor(s/60))+":"+pad(s%60)}
 function renderTrain(v){
